@@ -14,16 +14,6 @@ class Hydrant
             CP::Vec2.new(17, 57),
             CP::Vec2.new(17, -56),
         ]
-        # CP::Vec2.new(-13, -53),
-        #     CP::Vec2.new(-17, -17),
-        #     CP::Vec2.new(-36, -6),
-        #     CP::Vec2.new(-17, 0),
-        #     CP::Vec2.new(-17, 53),
-        #     CP::Vec2.new(17, 53),
-        #     CP::Vec2.new(17, 0),
-        #     CP::Vec2.new(36, -6),
-        #     CP::Vec2.new(17, -17),
-        #     CP::Vec2.new(13, -53),
 
         shape = CP::Shape::Poly.new(@body, bounds, CP::Vec2.new(0, 0))
         shape.u = FRICTION

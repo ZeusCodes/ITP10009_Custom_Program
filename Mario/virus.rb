@@ -4,7 +4,7 @@ class Virus
     FRICTION = 0.7
     ELASTICITY = 0.95
     SPEED_LIMIT = 500
-    attr_reader :body, :width, :height, :shape
+    attr_reader :body, :shape
     def initialize(window , x , y)
         @body = CP::Body.new(10,4000)
         @body.p = CP::Vec2.new(x, y)
@@ -26,8 +26,8 @@ class Virus
         @shape = CP::Shape::Poly.new(@body, bounds, CP::Vec2.new(0, 0))
         @shape.u = FRICTION
         @shape.e = ELASTICITY
-        @width = 34
-        @height = 34
+        # @width = 34
+        # @height = 34
         window.space.add_body(@body)
         window.space.add_shape(@shape)
         @image = Gosu::Image.new('../obstacles2/coronavirus.png')

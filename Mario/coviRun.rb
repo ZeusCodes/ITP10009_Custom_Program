@@ -1,8 +1,5 @@
 require 'gosu'
 require 'chipmunk'
-require_relative 'virus'
-require_relative 'platform'
-require_relative 'hydrant'
 
 class Player
     attr_accessor :body,:action,:image_index,:off_ground,:images
@@ -167,31 +164,102 @@ def add_health(immuneArr , health , player)
     return health
 end
 
-# Walls
-class Wall
-    FRICTION = 0.3
-    ELASTICITY = 0.2
-    attr_reader :body, :width, :height
-    def initialize(window, x, y, width, height)
-        space = window.space
-        @x = x
-        @y = y
-        @width = width
-        @height = height
-        @body = CP::Body.new_static()
-        @body.p = CP::Vec2.new(x,y)
-        sideBounds = (width / 2) - 5
-        heightBounds = (height / 2) - 5
-        @bounds = [CP::Vec2.new(-sideBounds, -heightBounds),
-                   CP::Vec2.new(-sideBounds, heightBounds),
-                   CP::Vec2.new(sideBounds, heightBounds),
-                   CP::Vec2.new(sideBounds, -heightBounds)]
-        @shape = CP::Shape::Poly.new(@body, @bounds, CP::Vec2.new(0, 0))
-        @shape.u = FRICTION
-        @shape.e = ELASTICITY
-        space.add_shape(@shape)
-    end    
+# Platform Bricks
+class Platform
+    FRICTION = 0.7
+    ELASTICITY = 0.8
+    attr_accessor :body, :width, :height,:image
 end
+
+def setup_platform(window , x, y,brick , brickImage)
+    space = window.space
+    brick.width = 70
+    brick.height = 70
+    brick.body = CP::Body.new_static
+    brick.body.p = CP::Vec2.new(x,y)
+    bounds = [
+        CP::Vec2.new(-31, -31),
+        CP::Vec2.new(-31, 31),
+        CP::Vec2.new(31, 31),
+        CP::Vec2.new(31, -31),
+    ]
+    shape = CP::Shape::Poly.new(brick.body, bounds, CP::Vec2.new(0, 0))
+    shape.u = FRICTION
+    shape.e = ELASTICITY
+    space.add_shape(shape)
+    brick.image = Gosu::Image.new(brickImage)
+    return brick
+end
+
+def draw_platform(platform)
+    platform.image.draw_rot(platform.body.p.x, platform.body.p.y, 1, 0)
+end
+
+# Hydrant 
+class Hydrant
+    attr_accessor :body, :width, :height,:image
+end
+
+def setup_hydrant(window , x, y ,  hydrant)
+    space = window.space
+    hydrant.width = 70
+    hydrant.height = 70
+    hydrant.body = CP::Body.new_static
+    hydrant.body.p = CP::Vec2.new(x,y)
+    bounds = [
+        CP::Vec2.new(-17, -56),
+        CP::Vec2.new(-17, 57),
+        CP::Vec2.new(17, 57),
+        CP::Vec2.new(17, -56),
+    ]
+
+    shape = CP::Shape::Poly.new(hydrant.body, bounds, CP::Vec2.new(0, 0))
+    shape.u = 0.7 #FRICTION
+    shape.e = 0.8 #ELASTICITY
+    space.add_shape(shape)
+    hydrant.image = Gosu::Image.new('../obstacles2/climbable3.png')
+    return hydrant
+end
+
+# Walls
+# class Wall
+#     FRICTION = 0.3
+#     ELASTICITY = 0.2
+#     attr_reader :body, :width, :height
+#     def initialize(window, x, y, width, height)
+#         space = window.space
+#         @width = width
+#         @height = height
+#         @body = CP::Body.new_static()
+#         @body.p = CP::Vec2.new(x,y)
+#         sideBounds = (width / 2) - 5
+#         heightBounds = (height / 2) - 5
+#         @bounds = [CP::Vec2.new(-sideBounds, -heightBounds),
+#                    CP::Vec2.new(-sideBounds, heightBounds),
+#                    CP::Vec2.new(sideBounds, heightBounds),
+#                    CP::Vec2.new(sideBounds, -heightBounds)]
+#         @shape = CP::Shape::Poly.new(@body, @bounds, CP::Vec2.new(0, 0))
+#         @shape.u = FRICTION
+#         @shape.e = ELASTICITY
+#         space.add_shape(@shape)
+#     end    
+# end
+
+def setup_wall(window, x, y, width, height)
+    space = window.space
+    body = CP::Body.new_static()
+    body.p = CP::Vec2.new(x,y)
+    sideBounds = (width / 2) - 5
+    heightBounds = (height / 2) - 5
+    bounds = [CP::Vec2.new(-sideBounds, -heightBounds),
+               CP::Vec2.new(-sideBounds, heightBounds),
+               CP::Vec2.new(sideBounds, heightBounds),
+               CP::Vec2.new(sideBounds, -heightBounds)]
+    shape = CP::Shape::Poly.new(body, bounds, CP::Vec2.new(0, 0))
+    shape.u = FRICTION
+    shape.e = ELASTICITY
+    space.add_shape(shape)
+end  
 
 # Terrain 
 class Terrain
@@ -202,7 +270,6 @@ def setup_terrain(window,terrain)
     terrain.hole = Gosu::Image.new("../obstacles2/hole3.png",tileable: true)
     # LEVEL 1
     # terrain.holes_arr = []
-    # @floor = Wall.new(window, 2000,500,4000,20)
 
     # LEVEL 2
     terrain.holes_arr = [400,950,1700,2900] 
@@ -224,17 +291,18 @@ def setup_terrain(window,terrain)
         while last_hole_at < terrain.holes_arr[i]
             if last_hole_at+90 > terrain.holes_arr[i]
                 space_left_to_hole = (terrain.holes_arr[i]-last_hole_at)*2
-                @floor = Wall.new(window, last_hole_at,500,space_left_to_hole,20)
+                setup_wall(window, last_hole_at,500,space_left_to_hole,20)
+                # @floor = Wall.new(window, last_hole_at,500,space_left_to_hole,20)
                 last_hole_at = terrain.holes_arr[i] + 180 + 90
             else
-                @floor = Wall.new(window, last_hole_at,500,180,20)
+                setup_wall(window, last_hole_at,500,180,20)
                 last_hole_at += 90
             end
         end
         i += 1
         if i == terrain.holes_arr.length()
             while last_hole_at < 5000
-                @floor = Wall.new(window, last_hole_at,500,180,20)
+                setup_wall(window, last_hole_at,500,180,20)
                 last_hole_at += 90
             end
         end
@@ -248,6 +316,43 @@ def draw_terrain(terrain)
         terrain.hole.draw(terrain.holes_arr[i],390, 0)
         i += 1
     end
+end
+
+# Covid Virus
+class Virus
+    attr_accessor :body, :shape, :image
+end
+
+def setup_virus(window , x , y , covid)
+    covid.body = CP::Body.new(10,4000)
+    covid.body.p = CP::Vec2.new(x, y)
+    covid.body.v_limit = 500 #SPEED_LIMIT
+    
+    bounds = [
+        CP::Vec2.new(-21,-25),
+        CP::Vec2.new(-31, -13),
+        CP::Vec2.new(-31, 0),
+        CP::Vec2.new(-28, 22),
+        CP::Vec2.new(-11, 29),
+        CP::Vec2.new(2, 32),
+        CP::Vec2.new(21, 24),
+        CP::Vec2.new(32, 7),
+        CP::Vec2.new(32, -13),
+        CP::Vec2.new(19, -22),
+        CP::Vec2.new(0, -35)]
+    
+    covid.shape = CP::Shape::Poly.new(covid.body, bounds, CP::Vec2.new(0, 0))
+    covid.shape.u =  0.7 #FRICTION
+    covid.shape.e = 0.95 #ELASTICITY
+    window.space.add_body(covid.body)
+    window.space.add_shape(covid.shape)
+    covid.image = Gosu::Image.new('../obstacles2/coronavirus.png')
+    covid.body.apply_impulse(CP::Vec2.new(rand(100000) - 50000, 100000),CP::Vec2.new(0,0))
+    return covid
+end
+
+def draw_covid(covid)
+    covid.image.draw_rot(covid.body.p.x, covid.body.p.y, 1, covid.body.angle * (180.0 / Math::PI))
 end
 
 # Health Vaccine
@@ -346,9 +451,7 @@ class Mario < Gosu::Window
         @goldArr = []
         @immuneArr = []
         @platforms = make_platforms
-        # @floor = Wall.new(self, 400,500,630,20)
-        @floor = Wall.new(self, 2000,500,4000,20)
-        @left_wall = Wall.new(self, -10, 520, 20,800)
+        @left_wall = setup_wall(self, -10, 520, 20,800)
         @player = Player.new()
         @player = setup_player(self,100,380,@player)
         # @camera = Camera.new(self, 521, 4000)
@@ -382,16 +485,19 @@ class Mario < Gosu::Window
             # end
             num = rand
             if num < 0.10
-              platforms.push Hydrant.new(self, 200 + rand(3200), 433)
+            #   platforms.push Hydrant.new(self, 200 + rand(3200), 433)
+              platforms.push setup_hydrant(self, 200 + rand(3200), 433  ,Hydrant.new())
+
               # direction = rand < 0.5 ? :vertical : :horizontal
               # range = 30 + rand(40)
               # platforms.push MovingPlatform.new(self, x, y, range, direction)
             elsif num < 0.80
-              platforms.push Platform.new(self, x, y)
-              platforms.push Platform.new(self, x+65, y)
+              platforms.push setup_platform(self , x ,y , Platform.new() , '../obstacles2/brick.png')
+              platforms.push setup_platform(self , x+65 ,y , Platform.new() , '../obstacles2/brick.png')
+            #   platforms.push Platform.new(self, x+65, y)
             elsif num > 0.93
-              platforms.push GoldBrick.new(self, x, y)
-              @goldArr.push GoldBrick.new(self, x, y)
+              platforms.push setup_platform(self , x+65 ,y , Platform.new() , '../obstacles2/gold_brick.png')
+              @goldArr.push setup_platform(self , x+65 ,y , Platform.new() , '../obstacles2/gold_brick.png')
               @immuneArr.push setup_vaccine(self , x+2 , y-20 , Health.new())
             #   Health.new(self,x+2, y-20)
             end
@@ -414,7 +520,7 @@ class Mario < Gosu::Window
                   @space.step(1.0/600)
               end 
               if rand < VIRUS_FREQUENCY
-                  @virusArr.push Virus.new(self, 200 + rand(3200), -20)
+                  @virusArr.push setup_virus(self, 200 + rand(3200), -20 , Virus.new())
               end
 
             #   puts @terr.hole
@@ -437,9 +543,8 @@ class Mario < Gosu::Window
                 @game_over = true
                 @status = "Lost"
                 puts "Lost"
-                Cheack_Leaderboard(@name , @score)
               end
-              if(player_x(@player) > 4000)
+              if(player_x(@player) > 4030)
                 @game_over = true
                 @status = "Won"
                 puts "Won"
@@ -466,14 +571,16 @@ class Mario < Gosu::Window
               end
             end
             @virusArr.each do |virus|
-              virus.draw
+                draw_covid(virus)
+            #   virus.draw
             end
             @immuneArr.each do |vaccine|
                 draw_vaccine(vaccine)
             #   health.draw
             end
             @platforms.each do |platform|
-              platform.draw
+                draw_platform(platform)
+            #   platform.draw
             end
             # @player.draw
             draw_player(@player)
