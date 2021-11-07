@@ -1,0 +1,18 @@
+//////////// Initialize Health above gold brick and only on collision apply the impulse//////////////
+0
+Pallab
+5
+Pallab
+5
+Pallab
+5
+Pallab
+5
+Pallab
+6
+Pallab
+8
+Pallab
+10
+Ravanda
+10
