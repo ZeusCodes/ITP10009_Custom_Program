@@ -430,7 +430,6 @@ class CoviRun < Gosu::Window
 
         @terr = Terrain.new()
         @terr = setup_terrain(self , @terr)
-        # Optimize for Mario
         @virusArr = [] 
         @goldArr = []
         @immuneArr = []
@@ -457,30 +456,40 @@ class CoviRun < Gosu::Window
           (0..15).each do |column|
             x = column * 300 + 100 # places a platform every other column
             y = row * 120 + 65 # places a platform every other row
-            # if row % 2 == 0
-            #   x -= 150
-            # end
+            if row % 2 == 0
+              x -= 100
+            end
             x += rand(100) - 50
             if(y<300)
               y -= rand(100)
             end
-            # if( y > 340 )
-              # y -= rand(50)
-            # end
-            num = rand
-            if num < 0.10
-            #   platforms.push Hydrant.new(self, 200 + rand(3200), 433)
-              
-              @terr.holes_arr
-              platforms.push setup_hydrant(self, 200 + rand(3200), 433  ,Hydrant.new())
 
-              # direction = rand < 0.5 ? :vertical : :horizontal
-              # range = 30 + rand(40)
-              # platforms.push MovingPlatform.new(self, x, y, range, direction)
-            elsif num < 0.80
+            num = rand
+            hydrant = Array.new()
+            if num < 0.50
+              i = 0
+              while i < @terr.holes_arr.length()
+                hydrant_x = 200 + rand(3200)
+                if((hydrant_x < @terr.holes_arr[i]-20) and (hydrant_x > @terr.holes_arr[i]-200))
+                  j=0
+                  while j < hydrant.length()
+                    if((hydrant_x <= hydrant[i]-20) and (hydrant_x > hydrant[i]+50))
+                      platforms.push setup_hydrant(self, hydrant_x , 433  ,Hydrant.new())
+                      hydrant.push hydrant_x
+                    end
+                    j += 1
+                  end
+                  if(hydrant.length() == 0)
+                    platforms.push setup_hydrant(self, hydrant_x , 433  ,Hydrant.new())
+                    hydrant.push hydrant_x
+                  end
+                end
+                i += 1
+              end
+
+            elsif num < 0.90
               platforms.push setup_platform(self , x ,y , Platform.new() , '../obstacles2/brick.png')
               platforms.push setup_platform(self , x+65 ,y , Platform.new() , '../obstacles2/brick.png')
-            #   platforms.push Platform.new(self, x+65, y)
             elsif num > 0.93
               platforms.push setup_platform(self , x+65 ,y , Platform.new() , '../obstacles2/gold_brick.png')
               @goldArr.push setup_platform(self , x+65 ,y , Platform.new() , '../obstacles2/gold_brick.png')
