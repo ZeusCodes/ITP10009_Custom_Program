@@ -1,16 +1,62 @@
 require 'gosu'
 require './leaderboard'
-require_relative 'mario'
+require_relative 'coviRun'
 
 
 TOP_COLOR = Gosu::Color.new(0x191A19)
 BOTTOM_COLOR = Gosu::Color.new(0x70191A19)
 TEXT_COLOR = Gosu::Color.new(0xffFF8243)
+INSTRUCTION_COLOR = Gosu::Color.new(0xff161E54)
+INACTIVE_COLOR  = 0xcc_666666
+ACTIVE_COLOR    = 0xcc_ff6666
+SELECTION_COLOR = 0xcc_0000ff
+WIDTH = 350
 
 module ZOrder
-    BACKGROUND, MENU, UI = *0..2
+    BACKGROUND, MENU, UI , INSTRUCTIONS = *0..3
 end
 
+class TextField < Gosu::TextInput
+    FONT = Gosu::Font.new(20)    
+    attr_reader :x, :y
+    
+    def initialize(window, x, y)
+      super()
+      
+      @window, @x, @y = window, x, y
+      
+      # Start with a self-explanatory text in each field.
+      self.text = "Name"
+    end
+    
+    def returnName
+      return self.text
+    end
+  
+    def draw(z)
+      # Change the background colour if this is the currently selected text field.
+      if @window.text_input == self
+        color = ACTIVE_COLOR
+      else
+        color = INACTIVE_COLOR
+      end
+      Gosu.draw_rect x - 5, y - 5, WIDTH + 2 * 5, height + 2 * 5, color, z
+  
+      # Draw the text
+      FONT.draw self.text, x, y, z
+    end
+    
+    def height
+      FONT.height
+    end
+  
+    # Selecting a text field with the mouse.
+    def under_mouse?
+      @window.mouse_x > x - 5 and @window.mouse_x < x + WIDTH + 5 and
+        @window.mouse_y > y - 5 and @window.mouse_y < y + height + 5
+    end    
+end
+  
 class MainMenu < Gosu::Window
 
     def initialize
@@ -21,23 +67,35 @@ class MainMenu < Gosu::Window
             @melbourne = Gosu::Image.new("../background/melbourne.jpeg")
             @tokyo = Gosu::Image.new("../background/tokyo.jpeg")
             @london = Gosu::Image.new("../background/test.png")
-            # @background = Gosu::Image.new("../backImages/super_mario_animation.gif")
 
 			@font = Gosu::Font.new(30)
+            @insMenu = true
+            @text_fields = Array.new(1) { |index| TextField.new(self, 85, 320) }
+            @userName  = ""
     end
 
     def update
     end
 
     def button_down(id)
+        @userName = @text_fields[0].returnName
 		case id
 			when Gosu::MsLeft
+                self.text_input = @text_fields.find { |tf| tf.under_mouse? }
 				area_clicked(mouse_x, mouse_y)
+            when Gosu::KB_RETURN
+				@userName = @text_fields[0].returnName
+            when Gosu::KB_ESCAPE
+                if self.text_input
+                  self.text_input = nil
+                else
+                  close
+                end
 	    end
 	end
 
     def draw_menu
-        draw_quad(50,50, BOTTOM_COLOR, 50, 400, TOP_COLOR, 400, 50, BOTTOM_COLOR, 400, 400, BOTTOM_COLOR, 10)
+        draw_quad(50,50, BOTTOM_COLOR, 50, 400, TOP_COLOR, 400, 50, BOTTOM_COLOR, 400, 400, BOTTOM_COLOR, ZOrder::MENU)
     end
 
     def draw_menu_options
@@ -53,15 +111,20 @@ class MainMenu < Gosu::Window
         @font.draw("Exit", 100 , 275, 3, 1.0, 1.0, TEXT_COLOR)
         draw_quad(80,270,0xff_7F7C82,300,270,0xff_7F7C82,300,305,0xff_7F7C82,80,305,0xff_7F7C82,ZOrder::UI)
 
-        # @font.draw("Exit", 100 , 325, 3, 1.0, 1.0, TEXT_COLOR)
-        # draw_quad(80,320,0xff_7F7C82,300,320,0xff_7F7C82,300,355,0xff_7F7C82,80,355,0xff_7F7C82,ZOrder::UI)
+        if  @insMenu == true
+            instructions = ">Use the 2 arrow keys to Go 'RIGHT' & 'LEFT' \n\n>Use the 'Space Bar' to jump\n\n>Press 'ESC' to close the game\n\n>Try to complete the course as fast as you can \n to earn a place on the leaderboard."
+            draw_quad(50,100,0xff_FF5151,750,100,0xff_FF5151,750,500,0xff_FF5151,50,500,0xff_FF5151,ZOrder::INSTRUCTIONS)
+            @font.draw(instructions, 75 , 175, 3, 1.0, 1.0, INSTRUCTION_COLOR)
+            @font.draw("X", 50 , 100, 3, 1.0, 1.0, INSTRUCTION_COLOR)
+        end
+
     end
 
     def draw_city
-        @paris.draw(500,50,5)
-        @melbourne.draw(500,175,5)
-        @london.draw(500,300,5)
-        @tokyo.draw(500,425,5)
+        @paris.draw(500,50,ZOrder::MENU)
+        @melbourne.draw(500,175,ZOrder::MENU)
+        @london.draw(500,300,ZOrder::MENU)
+        @tokyo.draw(500,425,ZOrder::MENU)
     end
 
     def area_clicked(mouse_x, mouse_y)
@@ -69,7 +132,7 @@ class MainMenu < Gosu::Window
         # Menu Options
         if ((mouse_x >80 && mouse_x < 300)&& (mouse_y > 120 && mouse_y < 155 ))
             close
-            window = Mario.new("../backImages/paris_2.jpeg")
+            window = CoviRun.new("../backImages/paris_2.jpeg",@userName)
             window.show
 		end
 		if ((mouse_x >80 && mouse_x < 300)&& (mouse_y > 170 && mouse_y < 205 ))
@@ -86,25 +149,30 @@ class MainMenu < Gosu::Window
             close
         end
 
+        #Instruction Menu
+        if((mouse_x >50 && mouse_x < 75)&& (mouse_y > 100 && mouse_y < 125 ))
+            @insMenu = false
+        end
+
         # Selecting City
         if ((mouse_x >500 && mouse_x < 700)&& (mouse_y > 50 && mouse_y < 150 ))
             close
-            window = Mario.new("../backImages/paris_2.jpeg")
+            window = CoviRun.new("../backImages/paris_2.jpeg",@userName)
             window.show
         end
         if ((mouse_x >500 && mouse_x < 700)&& (mouse_y > 175 && mouse_y < 275 ))
             close
-            window = Mario.new("../backImages/melbourne.jpeg")
+            window = CoviRun.new("../backImages/melbourne.jpeg",@userName)
             window.show
         end
         if ((mouse_x >500 && mouse_x < 700)&& (mouse_y > 300 && mouse_y < 400 ))
             close
-            window = Mario.new("../backImages/test.png")
+            window = CoviRun.new("../backImages/test.png",@userName)
             window.show
         end
         if ((mouse_x >500 && mouse_x < 700)&& (mouse_y > 425 && mouse_y < 525 ))
             close
-            window = Mario.new("../backImages/tokyo.png")
+            window = CoviRun.new("../backImages/tokyo.png",@userName)
             window.show
         end
     end
@@ -115,6 +183,7 @@ class MainMenu < Gosu::Window
         draw_city
         @background.draw(0,0,ZOrder::BACKGROUND)
         @font.draw("Main Menu", 150 , 75, ZOrder::UI, 1.0, 1.0, Gosu::Color::BLUE)
+        @text_fields.each { |tf| tf.draw(0) }
     end
 end
 

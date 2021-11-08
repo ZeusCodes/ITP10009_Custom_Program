@@ -140,9 +140,10 @@ def player_movements(direction,player)
 end
 # End of Try
 
-def remove_virus(virusArr , health , player)
+def remove_virus(virusArr , health , player,sound)
     virusArr.reject! do |virus|
       if(Gosu.distance(player.body.p.x, player.body.p.y, virus.body.p.x, virus.body.p.y) < 102)
+        sound.play
         @space.remove_body(virus.body)
         @space.remove_shape(virus.shape)
         virus.body.apply_impulse(CP::Vec2.new(2000, 0),CP::Vec2.new(0,0))
@@ -152,10 +153,10 @@ def remove_virus(virusArr , health , player)
     return health
 end
 
-def add_health(immuneArr , health , player)
+def add_health(immuneArr , health , player,sound)
     immuneArr.reject! do |immune|
       if(Gosu.distance(player.body.p.x, player.body.p.y, immune.body.p.x, immune.body.p.y) < 90)
-        # immune.body.apply_impulse(CP::Vec2.new(2000, 0),CP::Vec2.new(0,0))
+        sound.play
         @space.remove_body(immune.body)
         @space.remove_shape(immune.shape)
         health +=20
@@ -166,8 +167,6 @@ end
 
 # Platform Bricks
 class Platform
-    FRICTION = 0.7
-    ELASTICITY = 0.8
     attr_accessor :body, :width, :height,:image
 end
 
@@ -184,8 +183,8 @@ def setup_platform(window , x, y,brick , brickImage)
         CP::Vec2.new(31, -31),
     ]
     shape = CP::Shape::Poly.new(brick.body, bounds, CP::Vec2.new(0, 0))
-    shape.u = FRICTION
-    shape.e = ELASTICITY
+    shape.u = 0.7 #FRICTION
+    shape.e = 0.8 #ELASTICITY
     space.add_shape(shape)
     brick.image = Gosu::Image.new(brickImage)
     return brick
@@ -385,7 +384,6 @@ def setup_vaccine(window , x , y , vaccine)
     window.space.add_body(vaccine.body)
     window.space.add_shape(vaccine.shape)
     vaccine.image = Gosu::Image.new('../obstacles2/vaccine.png')   
-    # @body.apply_impulse(CP::Vec2.new(0, 0),CP::Vec2.new(0,0))
     return vaccine
 end
 
@@ -394,20 +392,7 @@ def draw_vaccine(vaccine)
 end
 
 # Camera
-class Camera
-    attr_accessor :x_offset, :y_offset,:window_width,:window_height,:x_offset_max,:y_offset_max,:window
-end
-
-def setup_camera(cam , window, space_height, space_width)
-    cam.window = window
-    # @space_height = space_height
-    cam.window_height = window.height
-    # @space_width = space_width
-    cam.window_width = window.width
-    cam.x_offset_max = space_width - cam.window_width
-    cam.y_offset_max = space_height - cam.window_height
-    return cam
-end
+Cam = Struct.new(:window,:window_height,:window_width,:x_offset_max, :y_offset_max,:x_offset, :y_offset)
 
 def view(cam)
     cam.window.translate(-cam.x_offset, -cam.y_offset) do
@@ -416,28 +401,27 @@ def view(cam)
 end
 
 def center_on(cam , x,y, right_margin, bottom_margin)
-    cam.x_offset = right_margin - cam.window_width + x #player_x(player) #player.body.p.x 
-    cam.y_offset = bottom_margin - cam.window_height + y #player_y(player) #player.body.p.y 
+    cam.x_offset = right_margin - cam.window_width + x 
+    cam.y_offset = bottom_margin - cam.window_height + y 
     cam.x_offset = cam.x_offset_max if cam.x_offset > cam.x_offset_max
     cam.x_offset = 0 if cam.x_offset < 0
     cam.y_offset = cam.y_offset_max if cam.y_offset > cam.y_offset_max
     cam.y_offset = 0 if cam.y_offset < 0
 end
 
-class Mario < Gosu::Window
+class CoviRun < Gosu::Window
     # Constants
     DAMPING = 0.90
     GRAVITY = 400.0
     NILHEALTH = Gosu::Color.new(0xffFF0000)
     FULLHEALTH = Gosu::Color.new(0xff49FF00)
-    # Optimize for Mario
-    VIRUS_FREQUENCY = 0.01 #This
+    VIRUS_FREQUENCY = 0.005 
 
     attr_reader :space,:HealthBar
 
-    def initialize(background)
+    def initialize(background,userName)
         super(1000,521)
-        self.caption = "Mario Run"
+        self.caption = "Covi Run"
         @game_over = false
         @space = CP::Space.new
         @space.damping = DAMPING
@@ -452,19 +436,19 @@ class Mario < Gosu::Window
         @immuneArr = []
         @platforms = make_platforms
         @left_wall = setup_wall(self, -10, 520, 20,800)
-        @player = Player.new()
-        @player = setup_player(self,100,380,@player)
-        # @camera = Camera.new(self, 521, 4000)
-        @cam = Camera.new()
-        setup_camera(@cam,self, 521, 4000)
+        @player = setup_player(self,100,380,Player.new())
+        @cam = Cam.new(self,self.height,self.width,4000-self.width,521-self.height)
         @font = Gosu::Font.new(40)
         @HealthBar = 100
         @status = "Lost"
         @leaderBoardCheck = ""
         @start_time=(Gosu.milliseconds / 1000).to_i
-        
-        # del
-        @name = "Pallab"
+        @name = userName
+
+        @music = Gosu::Song.new('Monkeys-Spinning-Monkeys.mp3')
+        @vaccine_impact = Gosu::Sample.new('impact-sound.wav')
+        @impact_sound = Gosu::Sample.new('virus-impact.wav')
+        @music.play(true)
     end
 
     def make_platforms
@@ -486,6 +470,8 @@ class Mario < Gosu::Window
             num = rand
             if num < 0.10
             #   platforms.push Hydrant.new(self, 200 + rand(3200), 433)
+              
+              @terr.holes_arr
               platforms.push setup_hydrant(self, 200 + rand(3200), 433  ,Hydrant.new())
 
               # direction = rand < 0.5 ? :vertical : :horizontal
@@ -513,8 +499,8 @@ class Mario < Gosu::Window
 
     def update
         center_on(@cam , @player.body.p.x , @player.body.p.y , 500, 100)
-        @HealthBar = remove_virus(@virusArr,@HealthBar,@player)
-        @HealthBar = add_health(@immuneArr,@HealthBar,@player)
+        @HealthBar = remove_virus(@virusArr,@HealthBar,@player,@impact_sound)
+        @HealthBar = add_health(@immuneArr,@HealthBar,@player,@vaccine_impact)
           unless @game_over
               10.times do 
                   @space.step(1.0/600)
@@ -522,14 +508,10 @@ class Mario < Gosu::Window
               if rand < VIRUS_FREQUENCY
                   @virusArr.push setup_virus(self, 200 + rand(3200), -20 , Virus.new())
               end
-
-            #   puts @terr.hole
               check_footing(@platforms,@terr.holes_arr,@player)
               if button_down?(Gosu::KbRight)
-                #   @player.move_right
                   player_movements("Right",@player)
               elsif button_down?(Gosu::KbLeft)
-                #   @player.move_left
                   player_movements("Left",@player)
               else
                   player_movements("stand",@player)
@@ -542,12 +524,10 @@ class Mario < Gosu::Window
               if(player_y(@player) > 650)
                 @game_over = true
                 @status = "Lost"
-                puts "Lost"
               end
               if(player_x(@player) > 4030)
                 @game_over = true
                 @status = "Won"
-                puts "Won"
                 Cheack_Leaderboard(@name , @score)
               end
           end
@@ -572,17 +552,13 @@ class Mario < Gosu::Window
             end
             @virusArr.each do |virus|
                 draw_covid(virus)
-            #   virus.draw
             end
             @immuneArr.each do |vaccine|
                 draw_vaccine(vaccine)
-            #   health.draw
             end
             @platforms.each do |platform|
                 draw_platform(platform)
-            #   platform.draw
             end
-            # @player.draw
             draw_player(@player)
             draw_terrain(@terr)
           end # end camera view loop
@@ -671,5 +647,5 @@ class Mario < Gosu::Window
     end 
 end
 
-window = Mario.new("../backImages/test.png")
-window.show
+# window = CoviRun.new("../backImages/test.png")
+# window.show
