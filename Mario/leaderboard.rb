@@ -8,6 +8,7 @@ module ZOrder
     BACKGROUND, MENU, UI = *0..2
 end
 
+# Class for storing Name and Scores of Leaderboard Players
 class Leader
     attr_accessor :Name,:Score
     def initialize ( name, score)
@@ -16,6 +17,7 @@ class Leader
     end
 end
 
+# Read Leaderboard Player from Textfile
 def leader
     leader_file = File.new("leaders.txt", "r")
     i = 0
@@ -55,6 +57,7 @@ class Leaderboard < Gosu::Window
         i = 0
         y_axis = 135
         while i < 8
+            # Drawing Player Names and Score
             @font.draw(@leaders[i].Name, 180 , y_axis, 3, 1.0, 1.0, TEXT_COLOR)
             @font.draw(@leaders[i].Score, 600 , y_axis, 3, 1.0, 1.0, TEXT_COLOR)
             y_axis += 69
@@ -62,6 +65,7 @@ class Leaderboard < Gosu::Window
         end
     end
 
+    # Going Back to Main Menu
     def area_clicked(mouse_x, mouse_y)
 
         if ((mouse_x >75 && mouse_x < 200)&& (mouse_y > 40 && mouse_y < 95 ))

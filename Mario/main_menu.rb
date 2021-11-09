@@ -12,10 +12,12 @@ ACTIVE_COLOR    = 0xcc_ff6666
 SELECTION_COLOR = 0xcc_0000ff
 WIDTH = 350
 
+# Enumerations For Setting Z - Order of display on Screen
 module ZOrder
     BACKGROUND, MENU, UI , INSTRUCTIONS = *0..3
 end
 
+# To Create an "Input For UserName"
 class TextField < Gosu::TextInput
     FONT = Gosu::Font.new(20)    
     attr_reader :x, :y
@@ -62,6 +64,7 @@ class MainMenu < Gosu::Window
     def initialize
         super 800, 600
 			self.caption = "Main Menu"
+            # Setting the Images for Game Background Selection
             @background = Gosu::Image.new("../background/super_mario_animation.gif")
             @paris = Gosu::Image.new("../background/paris_2.jpeg")
             @melbourne = Gosu::Image.new("../background/melbourne.jpeg")
@@ -69,7 +72,9 @@ class MainMenu < Gosu::Window
             @london = Gosu::Image.new("../background/test.png")
 
 			@font = Gosu::Font.new(30)
+            # If Instruction Menu is crossed or not
             @insMenu = true
+            # Input Field Initialization
             @text_fields = Array.new(1) { |index| TextField.new(self, 85, 320) }
             @userName  = ""
     end
@@ -78,6 +83,7 @@ class MainMenu < Gosu::Window
     end
 
     def button_down(id)
+        # Setting Username to Input value from the TextField
         @userName = @text_fields[0].returnName
 		case id
 			when Gosu::MsLeft
@@ -95,10 +101,12 @@ class MainMenu < Gosu::Window
 	end
 
     def draw_menu
+        # Drawing Show for menu options
         draw_quad(50,50, BOTTOM_COLOR, 50, 400, TOP_COLOR, 400, 50, BOTTOM_COLOR, 400, 400, BOTTOM_COLOR, ZOrder::MENU)
     end
 
     def draw_menu_options
+        # Drawing Menu Options
         @font.draw("Play Game >", 100 , 125, 3, 1.0, 1.0, TEXT_COLOR)
         draw_quad(80,120,0xff_7F7C82,300,120,0xff_7F7C82,300,155,0xff_7F7C82,80,155,0xff_7F7C82,ZOrder::UI)
 
@@ -111,6 +119,7 @@ class MainMenu < Gosu::Window
         @font.draw("Exit", 100 , 275, 3, 1.0, 1.0, TEXT_COLOR)
         draw_quad(80,270,0xff_7F7C82,300,270,0xff_7F7C82,300,305,0xff_7F7C82,80,305,0xff_7F7C82,ZOrder::UI)
 
+        # Drawing Instruction Menu
         if  @insMenu == true
             instructions = ">Use the 2 arrow keys to Go 'RIGHT' & 'LEFT' \n\n>Use the 'Space Bar' to jump\n\n>Press 'ESC' to close the game\n\n>Try to complete the course as fast as you can \n to earn a place on the leaderboard."
             draw_quad(50,100,0xff_FF5151,750,100,0xff_FF5151,750,500,0xff_FF5151,50,500,0xff_FF5151,ZOrder::INSTRUCTIONS)
@@ -127,6 +136,7 @@ class MainMenu < Gosu::Window
         @tokyo.draw(500,425,ZOrder::MENU)
     end
 
+    # Performing Task Based on Area Clicked
     def area_clicked(mouse_x, mouse_y)
 
         # Menu Options
@@ -135,6 +145,7 @@ class MainMenu < Gosu::Window
             window = CoviRun.new("../backImages/paris_2.jpeg",@userName)
             window.show
 		end
+        # Opening Leaderboard
 		if ((mouse_x >80 && mouse_x < 300)&& (mouse_y > 170 && mouse_y < 205 ))
             lead = Leaderboard.new
             lead.show
@@ -149,12 +160,12 @@ class MainMenu < Gosu::Window
             close
         end
 
-        #Instruction Menu
+        #Instruction Menu Closing
         if((mouse_x >50 && mouse_x < 75)&& (mouse_y > 100 && mouse_y < 125 ))
             @insMenu = false
         end
 
-        # Selecting City
+        # Selecting City and Starting Game with thee Selected Background
         if ((mouse_x >500 && mouse_x < 700)&& (mouse_y > 50 && mouse_y < 150 ))
             close
             window = CoviRun.new("../backImages/paris_2.jpeg",@userName)
